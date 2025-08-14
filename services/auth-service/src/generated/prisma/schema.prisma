@@ -1,0 +1,120 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserType {
+  ADMIN
+  SUPER_ADMIN
+  EMPLOYEE
+  DRIVER
+}
+
+enum Permission {
+  // User Management
+  USER_READ
+  USER_CREATE
+  USER_UPDATE
+  USER_DELETE
+  USER_MANAGE_ROLES
+
+  // Role Management
+  ROLE_READ
+  ROLE_CREATE
+  ROLE_UPDATE
+  ROLE_DELETE
+
+  // Session Management
+  SESSION_VIEW
+  SESSION_REVOKE
+
+  // Add other domain-specific permissions as needed
+}
+
+model User {
+  id                 String     @id @default(uuid())
+  email              String     @unique
+  phone              String?    @unique
+  password           String
+  type               UserType
+  isActive           Boolean    @default(true)
+  isVerified         Boolean    @default(false)
+  createdAt          DateTime   @default(now())
+  updatedAt          DateTime   @updatedAt
+  lastLogin          DateTime?
+  failedAttempts     Int        @default(0)
+  lockedUntil        DateTime?
+  resetToken         String?
+  resetTokenExpiry   DateTime?
+  lastPasswordChange DateTime?
+  sessions           Session[]
+  roles              UserRole[]
+
+  @@index([email])
+  @@index([phone])
+  @@index([isActive])
+}
+
+model Role {
+  id          String       @id @default(uuid())
+  name        String
+  description String?
+  isSystem    Boolean      @default(false) // System roles can't be modified
+  permissions Permission[]
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  users UserRole[]
+
+  @@unique([name])
+}
+
+model UserRole {
+  userId     String
+  roleId     String
+  assignedBy String? // Track who assigned this role
+  assignedAt DateTime  @default(now())
+  expiresAt  DateTime? // Optional role expiration
+
+  user User @relation(fields: [userId], references: [id])
+  role Role @relation(fields: [roleId], references: [id])
+
+  @@id([userId, roleId])
+}
+
+model Session {
+  id           String    @id @default(uuid())
+  userId       String
+  token        String    @unique
+  refreshToken String    @unique
+  ipAddress    String?
+  userAgent    String?
+  deviceId     String? // For device recognition
+  location     String? // Approximate location
+  isValid      Boolean   @default(true)
+  createdAt    DateTime  @default(now())
+  expiresAt    DateTime
+  lastUsedAt   DateTime?
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+model SystemConfig {
+  id          String   @id @default(uuid())
+  key         String   @unique
+  value       Json
+  description String?
+  isPublic    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([key])
+}

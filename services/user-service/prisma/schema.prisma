@@ -1,0 +1,78 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+
+
+
+enum DriverStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+}
+
+model Client {
+  id           Int       @id @default(autoincrement())
+  name        String
+  email       String    @unique
+  phone       String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  vendors     Vendor[]
+  employees   Employee[]
+}
+
+model Vendor {
+   id           Int       @id @default(autoincrement())
+  clientId    Int
+  name        String
+  email       String
+  phone       String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  client      Client    @relation(fields: [clientId], references: [id])
+  drivers     Driver[]
+}
+
+model Employee {
+  id           Int       @id @default(autoincrement())
+  authUserId   Int       // Links to Auth Service User.id
+  clientId     Int
+  firstName    String
+  lastName     String
+  email        String       @unique
+  phone        String?
+  department   String?
+  designation  String?
+  isActive     Boolean      @default(true)
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  client       Client       @relation(fields: [clientId], references: [id])
+}
+
+model Driver {
+  id           Int       @id @default(autoincrement())
+  authUserId  Int      // Links to Auth Service User.id
+  vendorId    Int
+  firstName   String
+  lastName    String
+  email       String
+  phone       String?
+  licenseNo   String
+  status      DriverStatus @default(ACTIVE)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  vendor      Vendor      @relation(fields: [vendorId], references: [id])
+}
+
+
